@@ -5,11 +5,11 @@ import kotlinx.serialization.Serializable
 sealed class AppRoute {
 
     @Serializable
-    data object WelcomeScreen : AppRoute()
+    data object Welcome : AppRoute()
 
     @Serializable
-    data object MoviesScreen : AppRoute()
+    data object Movies : AppRoute()
 
     @Serializable
-    data class MovieDetailScreen(val id: Int) : AppRoute()
+    data class MovieDetail(val id: Int) : AppRoute()
 }

@@ -49,21 +49,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.example.cleanmovieapp.presentation.movie_detail.viewmodel.MovieDetailUiState
 import com.example.cleanmovieapp.presentation.movie_detail.viewmodel.MovieDetailViewModel
 import com.example.cleanmovieapp.util.Constants
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun MovieDetailScreen(
-    modifier: Modifier = Modifier, id: Int, onNavigateBack: () -> Unit, viewModel: MovieDetailViewModel = koinViewModel()) {
+    modifier: Modifier, id: Int, onNavigateBack: () -> Unit, uiState: MovieDetailUiState , getDetail : (Int) -> Unit
+) {
 
-    val uiState by viewModel.movieDetailUiState.collectAsState()
     val movieDetail = uiState.movieDetail
 
     val context = LocalContext.current
 
     LaunchedEffect(id) {
-        viewModel.getDetail(id)
+        getDetail(id)
     }
 
     val screenBg = Color(0xFFFAFBFF)

@@ -1,5 +1,10 @@
 package com.example.cleanmovieapp.presentation.movies.views
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -7,7 +12,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,14 +22,15 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -39,8 +44,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,28 +55,37 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
-import com.example.cleanmovieapp.domain.model.Movie
+import androidx.compose.ui.zIndex
 import com.example.cleanmovieapp.presentation.movies.components.FeaturedBanner
 import com.example.cleanmovieapp.presentation.movies.components.MovieCard
+import com.example.cleanmovieapp.presentation.movies.viewmodel.MoviesUiState
 import com.example.cleanmovieapp.presentation.movies.viewmodel.MoviesViewModel
-import com.example.cleanmovieapp.util.Constants
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MoviesScreen(modifier: Modifier = Modifier, onMovieClick: (Int) -> Unit, viewModel: MoviesViewModel = koinViewModel()) {
-    val uiState by viewModel.moviesUiState.collectAsState()
+fun MoviesScreen(
+    modifier: Modifier,
+    onMovieClick: (Int) -> Unit,
+    uiState: MoviesUiState,
+    getMovies: () -> Unit,
+    getSearchMovies: (String) -> Unit,
+    loadNextPage: () -> Unit
+) {
 
     var searchInput by rememberSaveable { mutableStateOf(uiState.searchQuery) }
 
     var isRefreshing by rememberSaveable { mutableStateOf(false) }
+
+    val gridState = rememberLazyGridState()
+    val coroutineScope = rememberCoroutineScope()
 
     /*
      * Pull refresh bittikten sonra
@@ -189,15 +205,17 @@ fun MoviesScreen(modifier: Modifier = Modifier, onMovieClick: (Int) -> Unit, vie
                     isRefreshing = true
 
                     if (searchInput.isBlank()) {
-                        viewModel.getMovies()
+                        getMovies()
                     } else {
-                        viewModel.getSearchMovies(searchInput)
+                        getSearchMovies(searchInput)
                     }
                 },
 
                 modifier = Modifier
                     .fillMaxSize()
-            ) {
+            )
+
+            {
 
                 when {
                     uiState.isLoading && uiState.movies.isEmpty() && searchInput.isBlank() -> {
@@ -242,7 +260,26 @@ fun MoviesScreen(modifier: Modifier = Modifier, onMovieClick: (Int) -> Unit, vie
                     }
 
                     else -> {
+                        LaunchedEffect(gridState) {
+                            snapshotFlow {
+                                val layoutInfo = gridState.layoutInfo
+
+                                val lastVisibleItemIndex =
+                                    layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+
+                                val totalItemsCount = layoutInfo.totalItemsCount
+
+                                totalItemsCount > 0 && lastVisibleItemIndex >= totalItemsCount - 4
+                            }
+                                .distinctUntilChanged()
+                                .filter { it }
+                                .collect {
+                                    loadNextPage()
+                                }
+                        }
+
                         LazyVerticalGrid(
+                            state = gridState,
                             columns = GridCells.Fixed(2),
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(
@@ -269,9 +306,9 @@ fun MoviesScreen(modifier: Modifier = Modifier, onMovieClick: (Int) -> Unit, vie
                                     onValueChange = {
                                         searchInput = it
                                         if (it.isBlank()) {
-                                            viewModel.getMovies()
+                                            getMovies()
                                         } else {
-                                            viewModel.getSearchMovies(it)
+                                            getSearchMovies(it)
                                         }
                                     },
 
@@ -339,10 +376,10 @@ fun MoviesScreen(modifier: Modifier = Modifier, onMovieClick: (Int) -> Unit, vie
                                     Column {
                                         Text(
                                             text = if (searchInput.isBlank()) {
-                                                    "Popular Movies"
-                                                } else {
-                                                    "Search Results"
-                                                },
+                                                "Popular Movies"
+                                            } else {
+                                                "Search Results"
+                                            },
                                             color = textMain,
                                             fontSize = 19.sp,
                                             fontWeight = FontWeight.Black,
@@ -351,10 +388,10 @@ fun MoviesScreen(modifier: Modifier = Modifier, onMovieClick: (Int) -> Unit, vie
 
                                         Text(
                                             text = if (searchInput.isBlank()) {
-                                                    "Ranked by global community"
-                                                } else {
-                                                    "Results for \"$searchInput\""
-                                                },
+                                                "Ranked by global community"
+                                            } else {
+                                                "Results for \"$searchInput\""
+                                            },
                                             color = textMuted,
                                             fontSize = 11.sp
                                         )
@@ -394,11 +431,65 @@ fun MoviesScreen(modifier: Modifier = Modifier, onMovieClick: (Int) -> Unit, vie
                                     onMovieClick = onMovieClick
                                 )
                             }
+
+                            if (uiState.isLoadingMore) {
+                                item(
+                                    span = {
+                                        GridItemSpan(2)
+                                    }
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            color = brandPrimary,
+                                            strokeWidth = 3.dp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = gridState.firstVisibleItemIndex > 5,
+
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(20.dp)
+                                .zIndex(1f),
+
+                            enter = fadeIn() + scaleIn(
+                                initialScale = 0.7f
+                            ),
+
+                            exit = fadeOut() + scaleOut(
+                                targetScale = 0.7f
+                            )
+                        ) {
+
+                            FloatingActionButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        gridState.animateScrollToItem(0)
+                                    }
+                                },
+                                containerColor = brandPrimary,
+                                contentColor = Color.White
+                            ) {
+
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowUp,
+                                    contentDescription = "Scroll to top"
+                                )
+                            }
                         }
                     }
                 }
             }
         }
-
     }
+
 }

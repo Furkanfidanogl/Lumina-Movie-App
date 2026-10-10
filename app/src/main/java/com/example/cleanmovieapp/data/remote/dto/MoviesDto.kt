@@ -32,9 +32,9 @@ data class MoviesDto(
         @SerializedName("popularity")
         val popularity: Double,
         @SerializedName("poster_path")
-        val posterPath: String,
+        val posterPath: String?,
         @SerializedName("release_date")
-        val releaseDate: String,
+        val releaseDate: String?,
         @SerializedName("title")
         val title: String,
         @SerializedName("video")
@@ -54,7 +54,7 @@ fun MoviesDto.toMovieList() : List<Movie> {
             title = item.title,
             posterPath = item.posterPath,
             voteAverage = item.voteAverage,
-            releaseDate = item.releaseDate
+            releaseDate = item.releaseDate.orEmpty()
         )
     }
 }

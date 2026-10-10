@@ -9,7 +9,9 @@ import retrofit2.http.Query
 interface MovieApi{
 
     @GET("movie/top_rated")
-    suspend fun getMovies(): MoviesDto
+    suspend fun getMovies(
+        @Query("page") page : Int
+    ): MoviesDto
 
     @GET("movie/{id}")
     suspend fun getMovieDetail(

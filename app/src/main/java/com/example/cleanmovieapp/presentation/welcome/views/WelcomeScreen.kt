@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun WelcomeScreen(
-    modifier: Modifier = Modifier,
+    modifier: Modifier,
     onNavigateToMovies: () -> Unit = {}
 ) {
     Box(

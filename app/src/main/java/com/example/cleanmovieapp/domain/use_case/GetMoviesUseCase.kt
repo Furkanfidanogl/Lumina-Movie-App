@@ -7,10 +7,10 @@ import okio.IOException
 
 class GetMoviesUseCase(private val repository: MovieRepository) {
 
-    suspend operator fun invoke(): Resource<List<Movie>> {
+    suspend operator fun invoke(page : Int): Resource<List<Movie>> {
         return try {
             Resource.Success(
-                repository.getMovies()
+                repository.getMovies(page)
             )
         } catch (e: IOException) {
             Resource.Error(

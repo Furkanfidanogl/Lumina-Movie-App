@@ -6,7 +6,7 @@ import com.example.cleanmovieapp.domain.model.MovieDetail
 
 interface MovieRepository {
 
-    suspend fun getMovies(): List<Movie>
+    suspend fun getMovies(page : Int): List<Movie>
 
     suspend fun getMovieDetail(id: Int): MovieDetail
 

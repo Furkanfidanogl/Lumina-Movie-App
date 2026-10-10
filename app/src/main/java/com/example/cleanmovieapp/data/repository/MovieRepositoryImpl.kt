@@ -9,8 +9,8 @@ import com.example.cleanmovieapp.domain.repository.MovieRepository
 
 class MovieRepositoryImpl(private val api: MovieApi) : MovieRepository {
 
-    override suspend fun getMovies(): List<Movie> {
-        return api.getMovies().toMovieList()
+    override suspend fun getMovies(page : Int): List<Movie> {
+        return api.getMovies(page).toMovieList()
     }
 
     override suspend fun getMovieDetail(id: Int): MovieDetail {
